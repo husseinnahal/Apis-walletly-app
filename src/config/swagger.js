@@ -1,5 +1,4 @@
 import swaggerJsdoc from 'swagger-jsdoc';
-import config from './index.js';
 
 const options = {
   definition: {
@@ -15,7 +14,7 @@ const options = {
     },
     servers: [
       {
-        url: `http://localhost:${config.port || 5000}`,
+        url: `https://apis-walletly-app.onrender.com`,
         description: 'Development server',
       },
     ],
