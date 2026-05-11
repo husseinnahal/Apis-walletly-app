@@ -1,5 +1,6 @@
 import Category from '../models/categories.model.js';
 import User from '../models/users.model.js';
+import Transaction from '../models/transactions.model.js';
 import ApiError from '../utils/ApiError.js';
 
 // ==========================================
@@ -96,12 +97,25 @@ export const updateGlobalCategory = async (categoryId, updateData) => {
 };
 
 export const deleteGlobalCategory = async (categoryId) => {
-    const deleted = await Category.findOneAndDelete({
-         _id: categoryId,
-          isDefault: true 
-        });
-    if (!deleted) {
+    // 1. Check if the global category exists
+    const category = await Category.findOne({ 
+        _id: categoryId, 
+        isDefault: true 
+    });
+
+    if (!category) {
         throw ApiError.notFound('Global category not found');
     }
+
+    // 2. Check if there are any transactions associated with this category
+    const transactionCount = await Transaction.countDocuments({ category: categoryId });
+    
+    if (transactionCount > 0) {
+        throw ApiError.badRequest('Cannot delete global category because it has associated transactions.');
+    }
+
+    // 3. Delete the category
+    await Category.findByIdAndDelete(categoryId);
+    
     return true;
 };

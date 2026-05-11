@@ -60,10 +60,37 @@ export const createAccount = async (userId, accountData) => {
  */
 export const getAccounts = async (userId) => {
     const accounts = await Account.find({ user: userId }).sort({ createdAt: -1 });
+    
+    // Get stats for each account
+    const stats = await Transaction.aggregate([
+        { $match: { user: new mongoose.Types.ObjectId(userId) } },
+        {
+            $group: {
+                _id: '$account',
+                totalIncome: {
+                    $sum: { $cond: [{ $eq: ['$type', 'income'] }, '$amount', 0] }
+                },
+                totalExpense: {
+                    $sum: { $cond: [{ $eq: ['$type', 'expense'] }, '$amount', 0] }
+                }
+            }
+        }
+    ]);
+
+    // Map stats to accounts
+    const accountsWithStats = accounts.map(account => {
+        const accountStats = stats.find(s => s._id.toString() === account._id.toString());
+        return {
+            ...account.toObject(),
+            totalIncome: accountStats ? Number(accountStats.totalIncome.toFixed(2)) : 0,
+            totalExpense: accountStats ? Number(accountStats.totalExpense.toFixed(2)) : 0
+        };
+    });
+
     const totalLiquidity = accounts.reduce((acc, curr) => acc + (curr.totalBalance || 0), 0);
     
     return {
-        accounts,
+        accounts: accountsWithStats,
         totalLiquidity: Number(totalLiquidity.toFixed(2))
     };
 };

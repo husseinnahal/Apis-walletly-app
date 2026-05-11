@@ -119,7 +119,7 @@ export const createTransaction = async (userId, transactionData) => {
 export const getTransactions = async (userId, filters = {}) => {
     const query = { user: userId };
 
-    // Filter by type (income / expense)
+    // Filter by type (income / expense / saving / transfer)
     if (filters.type) {
         query.type = filters.type;
     }
@@ -131,6 +131,7 @@ export const getTransactions = async (userId, filters = {}) => {
     }
 
     // Handle Dates & Periods
+    // period  (today, yesterday, week, month, year) 
     let startDate, endDate;
 
     if (filters.period) {

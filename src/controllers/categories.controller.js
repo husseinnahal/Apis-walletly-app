@@ -1,7 +1,7 @@
 import * as categoriesService from '../services/categories.service.js';
 
 export const getMyCategories = async (req, res) => {
-    const categories = await categoriesService.getMyCategories(req.user._id);
+    const categories = await categoriesService.getMyCategories(req.user._id, req.query.search);
     res.status(200).json({ 
         success: true,
         count: categories.length, 
@@ -9,7 +9,7 @@ export const getMyCategories = async (req, res) => {
 };
 
 export const getMycustomCategories = async (req, res) => {
-    const categories = await categoriesService.getMycustomCategories(req.user._id);
+    const categories = await categoriesService.getMycustomCategories(req.user._id, req.query.search);
     res.status(200).json({ 
         success: true,
         count: categories.length, 
