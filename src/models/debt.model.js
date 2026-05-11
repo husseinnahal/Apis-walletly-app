@@ -57,6 +57,10 @@ const DebtSchema=new mongoose.Schema({
     ],
 
 
+    dueDateNotified: {
+        type: Boolean,
+        default: false
+    }
 },{timestamps:true})
 
 const Debt=mongoose.model("Debt",DebtSchema);

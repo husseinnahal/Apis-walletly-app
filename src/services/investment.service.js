@@ -1,4 +1,6 @@
 import Investment from '../models/investment.model.js';
+import User from '../models/users.model.js';
+import * as notificationService from './notification.service.js';
 import ApiError from '../utils/ApiError.js';
 
 /*
@@ -9,6 +11,28 @@ export const createInvestment = async (userId, investmentData) => {
         ...investmentData,
         userId
     });
+
+    // Send notification to all users
+    (async () => {
+        try {
+            const users = await User.find({ _id: { $ne: userId } }, '_id'); // Notify everyone except the creator
+            const notifications = users.map(user => ({
+                user: user._id,
+                title: 'New Investment Opportunity',
+                description: `A new investment "${investment.title}" has been posted.`,
+                icon: '📈',
+                feature: 'investment',
+                metadata: { investmentId: investment._id }
+            }));
+            
+            if (notifications.length > 0) {
+                await notificationService.createManyNotifications(notifications);
+            }
+        } catch (error) {
+            console.error('[Notification] Failed to send bulk investment notifications:', error.message);
+        }
+    })();
+
     return investment;
 };
 

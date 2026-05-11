@@ -13,6 +13,7 @@ import investmentRoute from './api/investment.route.js';
 import chatbotRoute from './api/chatbot.route.js';
 import accountRoute from './api/account.route.js';
 import gamificationRoute from './api/gamification.route.js';
+import notificationRoute from './api/notification.route.js';
 
 const router = express.Router();
 
@@ -49,6 +50,7 @@ router.use('/api/investments', investmentRoute);
 router.use('/api/chatbot', chatbotRoute);
 router.use('/api/accounts', accountRoute);
 router.use('/api/gamification', gamificationRoute);
+router.use('/api/notifications', notificationRoute);
 
 
 /**
@@ -82,6 +84,7 @@ router.get('/api', (req, res) => {
                chatbot: '/api/chatbot',
                accounts: '/api/accounts',
                gamification: '/api/gamification',
+               notifications: '/api/notifications',
           },
      });
 });

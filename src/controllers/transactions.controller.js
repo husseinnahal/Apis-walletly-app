@@ -144,7 +144,7 @@ export const aiParseTransactions = async (req, res) => {
             amount: Number(finalAmountInUSD.toFixed(2)) || 0,
             type: tx.type === 'income' ? 'income' : 'expense',
             category: categoryId,
-            account: tx.account,
+            account: tx.account || accounts[0]._id ,
             note: tx.note || '',
             date: tx.date ? new Date(tx.date) : new Date()
         };

@@ -290,6 +290,7 @@ export const markBillAsPaid = async (userId, billId, paymentData = {}) => {
     if (bill.isRecurring && bill.autoRenew) {
         bill.dueDate = calculateNextDueDate(bill.dueDate, bill.recurrence);
         bill.status = 'pending';
+        bill.reminderNotified = false; // Reset for next period
     } else {
         bill.status = 'paid';
     }

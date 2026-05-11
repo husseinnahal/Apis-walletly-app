@@ -5,6 +5,7 @@ import Budget from '../models/budgets.model.js';
 import Transaction from '../models/transactions.model.js';
 import ApiError from '../utils/ApiError.js';
 import * as gamificationService from './gamification.service.js';
+import * as notificationService from './notification.service.js';
 
 const convertToUSD = async (amount, currency) => {
     if (!currency || currency === 'USD') {
@@ -48,6 +49,44 @@ const updateBudgetSpentAmount = async (userId, categoryId, amountChange) => {
     if (activeBudget) {
         // Prevent spent amount from going below 0 (just in case of negative changes)
         const newSpent = Math.max(0, activeBudget.spent + amountChange);
+        
+        // --- Notification Logic ---
+        if (amountChange > 0) {
+            const percentage = (newSpent / (activeBudget.amount + activeBudget.carriedOverAmount)) * 100;
+            let currentThreshold = 0;
+
+            if (percentage >= 100) currentThreshold = 100;
+            else if (percentage >= 75) currentThreshold = 75;
+            else if (percentage >= 50) currentThreshold = 50;
+            else if (percentage >= 25) currentThreshold = 25;
+
+            if (currentThreshold > (activeBudget.lastNotifiedThreshold || 0)) {
+                let title = 'Budget Update';
+                let description = `You've used ${currentThreshold}% of your "${activeBudget.name}" budget.`;
+                let icon = '⚖️';
+
+                if (currentThreshold === 100) {
+                    title = 'Budget Completed';
+                    description = `You've reached 100% of your "${activeBudget.name}" budget.`;
+                    icon = '⚠️';
+                } else if (currentThreshold >= 75) {
+                    title = 'Budget Warning';
+                    icon = '⚠️';
+                }
+
+                await notificationService.createNotification(userId, {
+                    title,
+                    description,
+                    icon,
+                    feature: 'budget',
+                    metadata: { budgetId: activeBudget._id }
+                });
+
+                activeBudget.lastNotifiedThreshold = currentThreshold;
+            }
+        }
+        // ---------------------------
+
         activeBudget.spent = newSpent;
         await activeBudget.save();
     }

@@ -71,6 +71,8 @@ const gamificationSchema = new mongoose.Schema(
     // ── Milestone tracking (to avoid awarding milestone coins twice) ──────────
     /** List of streak milestones already rewarded, e.g. [7, 14, 30, ...] */
     awardedMilestones: { type: [Number], default: [] },
+    
+    streakReminderSent: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

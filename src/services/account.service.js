@@ -139,6 +139,10 @@ export const updateAccount = async (userId, accountId, updateData) => {
  * Delete account
  */
 export const deleteAccount = async (userId, accountId) => {
+    const accountsCount = await Account.countDocuments({ user: userId });
+    if (accountsCount <= 1) {
+        throw ApiError.badRequest('At least one account must be maintained');
+    }
     const account = await Account.findOne({ _id: accountId, user: userId });
     if (!account) throw ApiError.notFound('Account not found');
 

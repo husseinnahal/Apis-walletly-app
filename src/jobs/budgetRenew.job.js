@@ -1,5 +1,6 @@
 import Budget from '../models/budgets.model.js';
 import logger from '../utils/logger.js';
+import * as notificationService from '../services/notification.service.js';
 
 /**
  * Budget Renewal Job
@@ -60,32 +61,24 @@ const budgetRenewJob = async () => {
                     }
                }
 
-               // Create the new budget
-               const newBudget = new Budget({
-                    user: budget.user,
-                    category: budget.category,
-                    name: budget.name,
-                    note: budget.note,
-                    amount: budget.amount, // base amount stays the same
-                    spent: 0,
-                    period: budget.period,
-                    startDate: newStartDate,
-                    endDate: newEndDate,
-                    autoRenew: true,
-                    isActive: true,
-                    carryOverEnabled: budget.carryOverEnabled,
-                    carriedOverAmount: carriedOverAmount
+               // Update the existing budget for the new period
+               budget.startDate = newStartDate;
+               budget.endDate = newEndDate;
+               budget.spent = 0;
+               budget.lastNotifiedThreshold=0;
+               budget.carriedOverAmount = carriedOverAmount;
+               
+               // Keep isActive and autoRenew as they were (true)
+               await budget.save();
+
+               // Send notification
+               await notificationService.createNotification(budget.user, {
+                    title: 'Budget Renewed',
+                    description: `Your budget for "${budget.name}" renewed for the new period.`,
+                    icon: '🔄',
+                    feature: 'budget',
+                    metadata: { budgetId: budget._id }
                });
-
-               // Deactivate the old budget so it becomes history
-               budget.isActive = false;
-               budget.autoRenew = false;
-
-               // Save both
-               await Promise.all([
-                    newBudget.save(),
-                    budget.save()
-               ]);
 
                logger.info(`Successfully renewed budget: ${budget.name} for user: ${budget.user}`);
           }

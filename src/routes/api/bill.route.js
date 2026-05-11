@@ -23,7 +23,6 @@ const billSchema = createSchema({
         }),    
         isRecurring: Joi.boolean().optional(),
         recurrence: Joi.string().valid('weekly', 'monthly', 'quarterly', 'semiannual', 'yearly',null).optional(),
-        reminderDaysBefore: Joi.number().optional().min(0),
         notes: Joi.string().optional().allow(''),
         autoRenew: Joi.boolean().optional(),
         autoPaid: Joi.boolean().optional(),

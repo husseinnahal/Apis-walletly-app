@@ -1,5 +1,6 @@
 import Bill from '../models/bills.model.js';
 import { markBillAsPaid } from '../services/bill.service.js';
+import * as notificationService from '../services/notification.service.js';
 
 /**
  * Daily job to process bills:
@@ -22,6 +23,14 @@ const billAutoTasksJob = async () => {
             for (const bill of overdueBills) {
                 bill.status = 'overdue';
                 await bill.save();
+
+                await notificationService.createNotification(bill.userId, {
+                    title: 'Bill Overdue',
+                    description: `Your bill "${bill.name}" is now overdue.`,
+                    icon: '⚠️',
+                    feature: 'bill',
+                    metadata: { billId: bill._id }
+                });
             }
         }
 
@@ -43,9 +52,42 @@ const billAutoTasksJob = async () => {
                         date: now,
                         accountId: bill.autoPayAccountId
                     });
+
+                    await notificationService.createNotification(bill.userId, {
+                        title: 'Bill Paid Automatically',
+                        description: `Your bill "${bill.name}" was automatically paid.`,
+                        icon: '💳',
+                        feature: 'bill',
+                        metadata: { billId: bill._id }
+                    });
                 } catch (err) {
                     console.error(`[CRON] Failed to auto-pay bill ${bill._id}:`, err.message);
                 }
+            }
+        }
+
+        // 3. Process Reminders (3 days before)
+        const threeDaysFromNow = new Date();
+        threeDaysFromNow.setDate(now.getDate() + 3);
+
+        const reminderBills = await Bill.find({
+            status: 'pending',
+            dueDate: { $lte: threeDaysFromNow, $gte: now },
+            reminderNotified: false
+        });
+
+        if (reminderBills.length > 0) {
+            for (const bill of reminderBills) {
+                await notificationService.createNotification(bill.userId, {
+                    title: 'Upcoming Bill Reminder',
+                    description: `Your bill "${bill.name}" is due in 3 days.`,
+                    icon: '📅',
+                    feature: 'bill',
+                    metadata: { billId: bill._id }
+                });
+
+                bill.reminderNotified = true;
+                await bill.save();
             }
         }
 

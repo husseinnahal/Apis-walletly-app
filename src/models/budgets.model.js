@@ -72,6 +72,11 @@ const budgetSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0
+    },
+    lastNotifiedThreshold: {
+      type: Number,
+      default: 0,
+      enum: [0, 25, 50, 75, 100]
     }
 
   },

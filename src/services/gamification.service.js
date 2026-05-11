@@ -1,5 +1,6 @@
 import Gamification from '../models/gamification.model.js';
 import LeagueGroup from '../models/leagueGroup.model.js';
+import * as notificationService from './notification.service.js';
 
 const LEVELS = ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'master', 'legend'];
 
@@ -180,6 +181,7 @@ export const recordActivity = async (userId) => {
 
   doc.coins += coinsEarned;
   if (doc.lifetimeCoins !== undefined) doc.lifetimeCoins += coinsEarned;
+  doc.streakReminderSent = false; // Reset reminder flag
   await doc.save();
 
   return {
@@ -344,20 +346,68 @@ export const resetExpiredStreaks = async () => {
   // midnight of two days ago
   twoDaysAgo.setHours(0, 0, 0, 0);
 
-  const result = await Gamification.updateMany(
-    {
-      currentStreak: { $gt: 0 },
-      $or: [
-        { lastActivityDate: { $lt: twoDaysAgo } },
-        { lastActivityDate: null },
-      ],
-    },
-    {
-      $set: { currentStreak: 0, awardedMilestones: [] },
-    }
-  );
+  const filter = {
+    currentStreak: { $gt: 0 },
+    $or: [
+      { lastActivityDate: { $lt: twoDaysAgo } },
+      { lastActivityDate: null },
+    ],
+  };
 
-  return result.modifiedCount;
+  const usersToReset = await Gamification.find(filter);
+
+  if (usersToReset.length > 0) {
+    for (const doc of usersToReset) {
+      await notificationService.createNotification(doc.user, {
+        title: 'Streak Lost',
+        description: `Your ${doc.currentStreak}-day streak has ended due to inactivity. Start a new one today!`,
+        icon: '🔥',
+        feature: 'challenges'
+      });
+    }
+
+    const result = await Gamification.updateMany(filter, {
+      $set: { currentStreak: 0, awardedMilestones: [] },
+    });
+    return result.modifiedCount;
+  }
+
+  return 0;
+};
+
+/** 
+ * Streak reminder job: called by cron 
+ * Reminds users who haven't been active today but were active yesterday.
+ */
+export const sendStreakReminders = async () => {
+  const oneDayAgo = new Date();
+  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+  oneDayAgo.setHours(0, 0, 0, 0);
+
+  // Users whose last activity was between 24 and 48 hours ago
+  const filter = {
+    currentStreak: { $gt: 0 },
+    lastActivityDate: { $lt: new Date(), $gte: oneDayAgo },
+    streakReminderSent: false
+  };
+
+  const usersToRemind = await Gamification.find({filter});
+
+  if (usersToRemind.length > 0) {
+    for (const doc of usersToRemind) {
+      await notificationService.createNotification(doc.user, {
+        title: 'Keep your streak alive!',
+        description: `Keep your ${doc.currentStreak}-day streak going!`,
+        icon: '🔥',
+        feature: 'challenges'
+      });
+      doc.streakReminderSent = true;
+      await doc.save();
+    }
+    return usersToRemind.length;
+  }
+
+  return 0;
 };
 
 // ─── Leagues ──────────────────────────────────────────────────────────────────
@@ -401,6 +451,41 @@ export const processMonthlyLeagues = async () => {
         // Bottom 10 (index 20+) -> Demote
         newLevelIdx = Math.max(0, currentLevelIdx - 1);
       }
+
+      const newLevel = LEVELS[newLevelIdx];
+
+      let title = 'League Competition Results';
+      let description = '';
+      let icon = '🏅';
+
+      if (newLevelIdx > currentLevelIdx) {
+        title = 'League Promotion! 🏆';
+        description = `Congratulations! You've been promoted to the ${newLevel.toUpperCase()} league.`;
+        icon = '🏅';
+      } else if (newLevelIdx < currentLevelIdx) {
+        title = 'League Demotion';
+        description = `You've been moved down to the ${newLevel.toUpperCase()} league.`;
+        icon = '📉';
+      } else {
+        description = `You've maintained your position in the ${newLevel.toUpperCase()} league.`;
+        icon = '🏆';
+      }
+
+      // Send the Renewal notification
+      await notificationService.createNotification(member.user, {
+        title: 'League Renewed! 🔄',
+        description: 'The competition month has ended and the leagues have been renewed for the new month.',
+        icon: '🔄',
+        feature: 'challenges'
+      });
+
+      // Send the Result notification
+      await notificationService.createNotification(member.user, {
+        title,
+        description,
+        icon,
+        feature: 'challenges'
+      });
 
       member.level = LEVELS[newLevelIdx];
       member.coins = 0;

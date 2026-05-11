@@ -39,12 +39,6 @@ const billSchema = new mongoose.Schema({
         default: "monthly",
     },
 
-
-    reminderDaysBefore: {
-        type: Number,
-        default: 3, // remind before due date
-    },
-
     notes: {
         type: String,
     },
@@ -78,6 +72,10 @@ const billSchema = new mongoose.Schema({
 
     image: {
         type: String,
+    },
+    reminderNotified: {
+        type: Boolean,
+        default: false,
     }
 
 }, { timestamps: true });

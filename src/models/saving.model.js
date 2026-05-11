@@ -48,6 +48,10 @@ const SavingGoalSchema = new mongoose.Schema(
       },
     ],
 
+    deadlineNotified: {
+      type: Boolean,
+      default: false
+    }
   },
   { timestamps: true }
 );
