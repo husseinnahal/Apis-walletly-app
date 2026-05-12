@@ -56,8 +56,10 @@ export const getMyBudgets = async (userId, filters = {}) => {
   // 📊 Calculate totals
   const totals = budgets.reduce(
     (acc, budget) => {
-      acc.totalAmount += budget.amount || 0;
-      acc.totalSpent += budget.spent || 0;
+      if (budget.isActive) {
+        acc.totalAmount += (budget.amount || 0) + (budget.carriedOverAmount || 0);
+        acc.totalSpent += budget.spent || 0;
+      }
       return acc;
     },
     { totalAmount: 0, totalSpent: 0 }
@@ -67,6 +69,25 @@ export const getMyBudgets = async (userId, filters = {}) => {
     budgets,
     totals
   };
+};
+
+/**
+ * Get simplified budget statistics (Totals and overall percentage)
+ */
+export const getBudgetStats = async (userId) => {
+    const budgets = await Budget.find({ user: userId, isActive: true });
+
+    const totalAmount = budgets.reduce((sum, b) => sum + (b.amount || 0) + (b.carriedOverAmount || 0), 0);
+    const totalSpent = budgets.reduce((sum, b) => sum + (b.spent || 0), 0);
+    
+    let percentage = totalAmount > 0 ? (totalSpent / totalAmount) * 100 : 0;
+    percentage = Math.min(percentage, 100).toFixed(1);
+
+    return {
+        totalAmount,
+        totalSpent,
+        percentage: Number(percentage)
+    };
 };
 
 export const getBudget = async (userId, budgetId) => {
@@ -223,4 +244,7 @@ export const toggleOverAmount = async (userId, budgetId) => {
 
     return budget;
 };
+
+
+
 

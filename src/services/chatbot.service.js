@@ -1,13 +1,12 @@
-import Transaction from '../models/transactions.model.js';
-import Budget from '../models/budgets.model.js';
-import Saving from '../models/saving.model.js';
-import Debt from '../models/debt.model.js';
-import Bill from '../models/bills.model.js';
-import Metal from '../models/metals.model.js';
-import Investment from '../models/investment.model.js';
-import Account from '../models/accounts.model.js';
-import * as aiService from './ai.service.js';
+import * as transactionService from './transactions.service.js';
+import * as budgetService from './budget.service.js';
+import * as savingsService from './savings.service.js';
+import * as debtService from './debt.service.js';
+import * as billService from './bill.service.js';
 import * as metalService from './metals.service.js';
+import * as investmentService from './investment.service.js';
+import * as accountService from './account.service.js';
+import * as aiService from './ai.service.js';
 
 /**
  * Aggregates all user financial data to provide context for the AI
@@ -18,32 +17,47 @@ export const getUserFinancialContext = async (userId) => {
         budgets,
         savings,
         debts,
-        bills,
+        billData,
         metals,
-        myInvestments,
+        investmentData,
         metalStats,
         accounts
     ] = await Promise.all([
-        Transaction.find({ userId }).sort({ date: -1 }).limit(50).lean(), // Last 50 transactions
-        Budget.find({ userId }).lean(),
-        Saving.find({ userId }).lean(),
-        Debt.find({ userId }).lean(),
-        Bill.find({ userId }).lean(),
-        Metal.find({ userId }).lean(),
-        Investment.find({ userId }).lean(),
-        metalService.getMetalStats(userId).catch(() => null), // Get detailed metal profits/market value
-        Account.find({ user: userId }).lean()
+        transactionService.getTransactions(userId, { limit: 50 }),
+        budgetService.getMyBudgets(userId),
+        savingsService.getSavingGoals(userId),
+        debtService.getDebts(userId),
+        billService.getBills(userId),
+        metalService.getMetals(userId),
+        investmentService.getMyInvestments(userId),
+        metalService.getMetalStats(userId).catch(() => null),
+        accountService.getAccounts(userId)
     ]);
+
+    // Format bill data (service returns { upcoming, others, stats })
+    const bills = billData.upcoming ? [...billData.upcoming, ...billData.others] : billData;
+    const myInvestments = investmentData;
 
     // --- CALCULATIONS ---
 
     // 1. Transaction Stats
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
     const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
     const totalExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
+    const spentToday = transactions
+        .filter(t => t.type === 'expense' && new Date(t.date) >= startOfToday)
+        .reduce((sum, t) => sum + t.amount, 0);
+    
+    const incomeToday = transactions
+        .filter(t => t.type === 'income' && new Date(t.date) >= startOfToday)
+        .reduce((sum, t) => sum + t.amount, 0);
+
     // 2. Bills Stats
-    const totalPaidBills = bills.filter(b => b.isPaid).reduce((sum, b) => sum + b.amount, 0);
-    const totalUnpaidBills = bills.filter(b => !b.isPaid).reduce((sum, b) => sum + b.amount, 0);
+    const totalPaidBills = bills.filter(b => b.status === 'paid').reduce((sum, b) => sum + b.amount, 0);
+    const totalUnpaidBills = bills.filter(b => b.status !== 'paid' && b.status !== 'cancelled').reduce((sum, b) => sum + b.amount, 0);
 
     // 3. Savings Stats
     const totalSavingsTarget = savings.reduce((sum, s) => sum + s.amount, 0);
@@ -76,6 +90,8 @@ export const getUserFinancialContext = async (userId) => {
     // Format for AI
     return {
         financialTotals: {
+            spentToday,
+            incomeToday,
             incomeInLast50Transactions: totalIncome,
             expenseInLast50Transactions: totalExpense,
             netCashFlow: totalIncome - totalExpense,
@@ -139,7 +155,7 @@ export const getUserFinancialContext = async (userId) => {
         bills: bills.map(b => ({
             name: b.name,
             amount: b.amount,
-            isPaid: b.isPaid,
+            status: b.status,
             dueDate: b.dueDate
         })),
         marketplaceInvestments: myInvestments.map(i => ({

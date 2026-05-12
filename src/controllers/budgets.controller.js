@@ -10,6 +10,16 @@ export const getMyBudgets = async (req, res) => {
     });
 };
 
+export const getBudgetStats = async (req, res) => {
+    const stats = await budgetsService.getBudgetStats(req.user._id);
+    res.status(200).json({
+        success: true,
+        currency: req.user.currency,
+        currencyRate: req.user.currencyRate,
+        data: stats
+    });
+};
+
 export const getBudget = async (req, res) => {
     const budget = await budgetsService.getBudget(req.user._id, req.params.budgetId);
     res.status(200).json({ 

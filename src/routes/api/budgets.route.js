@@ -98,6 +98,20 @@ router.get('/', budgetsController.getMyBudgets);
 
 /**
  * @swagger
+ * /api/budgets/stats:
+ *   get:
+ *     summary: Get overall budget statistics
+ *     tags: [Budgets]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Budget statistics
+ */
+router.get('/stats', budgetsController.getBudgetStats);
+
+/**
+ * @swagger
  * /api/budgets/{budgetId}:
  *   get:
  *     summary: Get budget by ID
