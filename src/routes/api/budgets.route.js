@@ -86,7 +86,7 @@ router.use(protect);
  * @swagger
  * /api/budgets:
  *   get:
- *     summary: Get all user budgets
+ *     summary: Get all  budgets for the user
  *     tags: [Budgets]
  *     security:
  *       - bearerAuth: []

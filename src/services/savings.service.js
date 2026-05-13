@@ -55,9 +55,9 @@ export const createSavingGoal = async (userId, data) => {
 export const getSavingGoals = async (userId, filters = {}) => {
     const query = { userId: userId };
 
-    if (filters.title && filters.title.trim() !== '') {
+    if (filters.search && filters.search.trim() !== '') {
         query.title = {
-            $regex: filters.title,
+            $regex: filters.search,
             $options: 'i' 
         };
     }

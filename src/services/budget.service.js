@@ -38,9 +38,9 @@ export const getMyBudgets = async (userId, filters = {}) => {
   const query = { user: userId };
 
   // Search by name
-  if (filters.name && filters.name.trim() !== '') {
+  if (filters.search && filters.search.trim() !== '') {
     query.name = {
-      $regex: filters.name,
+      $regex: filters.search,
       $options: 'i', 
     };
   }
