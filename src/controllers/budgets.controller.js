@@ -1,7 +1,7 @@
 import * as budgetsService from '../services/budget.service.js';
 
 export const getMyBudgets = async (req, res) => {
-    const budgets = await budgetsService.getMyBudgets(req.user._id);
+    const budgets = await budgetsService.getMyBudgets(req.user._id, req.query);
     res.status(200).json({ 
         success: true, 
         currency: req.user.currency,

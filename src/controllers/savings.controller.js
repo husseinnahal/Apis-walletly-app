@@ -9,7 +9,7 @@ export const createSavingGoal =async (req, res) => {
 };
 
 export const getSavingGoals =async (req, res) => {
-    const goals = await savingsService.getSavingGoals(req.user._id);
+    const goals = await savingsService.getSavingGoals(req.user._id, req.query);
     res.status(200).json({
         success: true,
         currency: req.user.currency,
