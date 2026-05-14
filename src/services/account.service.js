@@ -79,7 +79,7 @@ export const getAccounts = async (userId) => {
 
     // Map stats to accounts
     const accountsWithStats = accounts.map(account => {
-        const accountStats = stats.find(s => s._id.toString() === account._id.toString());
+        const accountStats = stats.find(s => s._id && s._id.toString() === account._id.toString());
         return {
             ...account.toObject(),
             totalIncome: accountStats ? Number(accountStats.totalIncome.toFixed(2)) : 0,

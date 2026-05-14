@@ -13,15 +13,15 @@ import * as aiService from './ai.service.js';
  */
 export const getUserFinancialContext = async (userId) => {
     const [
-        transactions,
-        budgets,
-        savings,
-        debts,
+        transactionData,
+        budgetData,
+        savingsData,
+        debtData,
         billData,
         metals,
         investmentData,
         metalStats,
-        accounts
+        accountData
     ] = await Promise.all([
         transactionService.getTransactions(userId, { limit: 50 }),
         budgetService.getMyBudgets(userId),
@@ -33,6 +33,13 @@ export const getUserFinancialContext = async (userId) => {
         metalService.getMetalStats(userId).catch(() => null),
         accountService.getAccounts(userId)
     ]);
+
+    // Extract arrays from service response objects
+    const transactions = [...(transactionData.todayTransactions || []), ...(transactionData.otherTransactions || [])];
+    const budgets = budgetData.budgets || [];
+    const savings = savingsData.goals || [];
+    const debts = debtData.debts || [];
+    const accounts = accountData.accounts || [];
 
     // Format bill data (service returns { upcoming, others, stats })
     const bills = billData.upcoming ? [...billData.upcoming, ...billData.others] : billData;

@@ -1,9 +1,13 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import fs from 'fs';
+import Groq from 'groq-sdk';
 import ApiError from '../utils/ApiError.js';
 
 // Initialize Gemini with the API key from environment variables
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Initialize Groq with the API key
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // Use Gemini 2.5 Flash for maximum speed and accuracy, fallback to 1.5 if busy
 const getModel = () => {
@@ -133,13 +137,11 @@ export const parseVoiceTransactions = async (audioFilePath, categories, accounts
  * Generate Smart Saving Plan and Insights for a specific goal
  */
 export const getSavingGoalInsights = async (goal, language = 'English') => {
-    if (!process.env.GEMINI_API_KEY) {
-        throw ApiError.internal('Gemini API key is missing.');
+    if (!process.env.GROQ_API_KEY) {
+        throw ApiError.internal('Groq API key is missing.');
     }
 
     try {
-        let model = getModel();
-        
         const daysRemaining = goal.deadline ? Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24)) : 'No deadline';
         const progressPercent = ((goal.total / goal.amount) * 100).toFixed(1);
         
@@ -162,33 +164,21 @@ export const getSavingGoalInsights = async (goal, language = 'English') => {
             - Keep it professional, highly concise, and motivating.
             - Format the response as a JSON object with these keys: "savingPlan", "insights", "suggestions".
             - CRITICAL: Each value must be EXTREMELY short (max 2-3 short, punchy sentences).
-
-            Format:
-            {
-              "savingPlan": "...",
-              "insights": "...",
-              "suggestions": "..."
-            }
         `;
 
-        let result;
-        try {
-            result = await model.generateContent(prompt);
-        } catch (err) {
-            if (err.message.includes('503') || err.message.includes('429')) {
-                model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
-                result = await model.generateContent(prompt);
-            } else {
-                throw err;
-            }
-        }
+        const chatCompletion = await groq.chat.completions.create({
+            messages: [
+                { role: 'system', content: 'You are a helpful financial assistant that only outputs valid JSON.' },
+                { role: 'user', content: prompt }
+            ],
+            model: 'llama-3.3-70b-versatile',
+            response_format: { type: 'json_object' }
+        });
 
-        const rawText = result.response.text().trim();
-        const cleanJson = rawText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
-        return JSON.parse(cleanJson);
+        return JSON.parse(chatCompletion.choices[0].message.content);
 
     } catch (error) {
-        console.error('Gemini AI Insights Error:', error);
+        console.error('Groq Saving Insights Error:', error);
         throw ApiError.internal(`AI Insights Error: ${error.message || 'Unknown error'}`);
     }
 };
@@ -197,13 +187,11 @@ export const getSavingGoalInsights = async (goal, language = 'English') => {
  * Generate Smart Debt Plan and Insights for a specific debt
  */
 export const getDebtInsights = async (debt, language = 'English') => {
-    if (!process.env.GEMINI_API_KEY) {
-        throw ApiError.internal('Gemini API key is missing.');
+    if (!process.env.GROQ_API_KEY) {
+        throw ApiError.internal('Groq API key is missing.');
     }
 
     try {
-        let model = getModel();
-        
         const daysRemaining = debt.dueDate ? Math.ceil((new Date(debt.dueDate) - new Date()) / (1000 * 60 * 60 * 24)) : 'No deadline';
         const progressPercent = ((debt.total / debt.amount) * 100).toFixed(1);
         
@@ -228,33 +216,21 @@ export const getDebtInsights = async (debt, language = 'English') => {
             - Keep it professional, data-driven, and highly concise.
             - Format the response as a JSON object with these keys: "debtPlan", "suggestions", "impact".
             - CRITICAL: Each value must be EXTREMELY short (max 2 short, punchy sentences).
-
-            Format:
-            {
-              "debtPlan": "...",
-              "suggestions": "...",
-              "impact": "..."
-            }
         `;
 
-        let result;
-        try {
-            result = await model.generateContent(prompt);
-        } catch (err) {
-            if (err.message.includes('503') || err.message.includes('429')) {
-                model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
-                result = await model.generateContent(prompt);
-            } else {
-                throw err;
-            }
-        }
+        const chatCompletion = await groq.chat.completions.create({
+            messages: [
+                { role: 'system', content: 'You are a professional financial expert that only outputs valid JSON.' },
+                { role: 'user', content: prompt }
+            ],
+            model: 'llama-3.3-70b-versatile',
+            response_format: { type: 'json_object' }
+        });
 
-        const rawText = result.response.text().trim();
-        const cleanJson = rawText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
-        return JSON.parse(cleanJson);
+        return JSON.parse(chatCompletion.choices[0].message.content);
 
     } catch (error) {
-        console.error('Gemini AI Debt Insights Error:', error);
+        console.error('Groq Debt Insights Error:', error);
         throw ApiError.internal(`AI Debt Insights Error: ${error.message || 'Unknown error'}`);
     }
 };
@@ -262,13 +238,11 @@ export const getDebtInsights = async (debt, language = 'English') => {
  * Generate a response for the Walletly AI Chatbot
  */
 export const getChatbotResponse = async (userContext, userMessage, history = [], language = 'English') => {
-    if (!process.env.GEMINI_API_KEY) {
-        throw ApiError.internal('Gemini API key is missing.');
+    if (!process.env.GROQ_API_KEY) {
+        throw ApiError.internal('Groq API key is missing.');
     }
 
     try {
-        let model = getModel();
-        
         const systemPrompt = `
             You are the "Walletly AI Assistant", a professional and friendly financial expert embedded in the Walletly app.
             
@@ -286,35 +260,30 @@ export const getChatbotResponse = async (userContext, userMessage, history = [],
             - FORMATTING: Use clean, plain text formatting. DO NOT use Markdown symbols like "**" for bold or "*" for lists.
             - BULLETS: Use the "•" character for bullet points, with each point on a new line.
             - SPACING: Use double new lines between major sections.
-            - EMOJIS: Use relevant financial and motivational emojis (e.g., 💰, 📈, ⚖️, 🎯, ✅) at the start of key points.
-            - LANGUAGE: Output the response in the SAME LANGUAGE as the User's question. If the user speaks Arabic, you must answer in Arabic. If they speak English, answer in English. Do not mix languages unless requested.
-            
-            USER DATA CONTEXT:
-            ${JSON.stringify(userContext, null, 2)}
-            
-            CONVERSATION HISTORY (FOR CONTINUITY):
-            ${history.map(h => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content}`).join('\n')}
-            
-            USER QUESTION:
-            ${userMessage}
-        `;
+- EMOJIS: Use financial/motivational emojis (💰, 📈, ⚖️, 🎯, ✅) at the start of key points.
+- LANGUAGE: Output the response in the SAME LANGUAGE as the User's question.
 
-        let result;
-        try {
-            result = await model.generateContent(systemPrompt);
-        } catch (err) {
-            if (err.message.includes('503') || err.message.includes('429')) {
-                model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
-                result = await model.generateContent(systemPrompt);
-            } else {
-                throw err;
-            }
-        }
+USER DATA CONTEXT:
+${JSON.stringify(userContext)}`;
 
-        return result.response.text().trim();
+        const chatCompletion = await groq.chat.completions.create({
+            messages: [
+                { role: 'system', content: systemPrompt },
+                ...history.map(h => ({
+                    role: h.role === 'user' ? 'user' : 'assistant',
+                    content: h.content
+                })),
+                { role: 'user', content: `Context: ${JSON.stringify(userContext)}\n\nMessage: ${userMessage}` }
+            ],
+            model: 'llama-3.3-70b-versatile',
+            temperature: 0.7,
+            max_tokens: 1024
+        });
+
+        return chatCompletion.choices[0].message.content.trim();
 
     } catch (error) {
-        console.error('Gemini AI Chatbot Error:', error);
+        console.error('Groq Chatbot Error:', error);
         throw ApiError.internal(`AI Chatbot Error: ${error.message || 'Unknown error'}`);
     }
 };
