@@ -61,7 +61,7 @@ export const getInvestments = async (userId, filters = {}) => {
 
     const [investments, availableCount] = await Promise.all([
         Investment.find(query)
-            .populate('userId', 'name email phone avatar')
+            .populate('userId', ' username email phone avatar')
             .sort({ isAvailable: -1, createdAt: -1 }),
         Investment.countDocuments({ isAvailable: true })
     ]);
