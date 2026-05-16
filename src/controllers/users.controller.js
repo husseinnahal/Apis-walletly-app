@@ -80,3 +80,16 @@ export const updateAvatar = async (req, res) => {
           data: updatedUser
      });
 };
+
+/**
+ * Get all upcoming bills, savings, and debts for the current week
+ * @route GET /api/users/upcoming
+ */
+export const getUpcoming = async (req, res) => {
+     const upcoming = await usersService.getUpcomingThisWeek(req.user._id);
+
+     res.status(200).json({
+          success: true,
+          data: upcoming
+     });
+};

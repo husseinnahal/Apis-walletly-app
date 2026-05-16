@@ -81,6 +81,7 @@ router.use(protect);
  */
 router.get('/profile', usersController.getMe);
 router.get('/allusers', usersController.getUsers);
+router.get('/upcoming', usersController.getUpcoming);
 
 /**
  * @swagger

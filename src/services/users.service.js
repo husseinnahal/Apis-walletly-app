@@ -1,4 +1,7 @@
 import User from '../models/users.model.js';
+import Bill from '../models/bills.model.js';
+import Saving from '../models/saving.model.js';
+import Debt from '../models/debt.model.js';
 import ApiError from '../utils/ApiError.js';
 import { deleteImageFromCloudinary, uploadImageToCloudinary } from '../utils/cloudinary.js';
 
@@ -157,4 +160,44 @@ export const updateAvatar = async (userId, fileBuffer) => {
      delete userWithoutPassword.password;
 
      return userWithoutPassword;
+};
+
+/**
+ * Get all upcoming bills, savings deadlines, and debt deadlines for the current week
+ * @param {string} userId The logged-in user's ID
+ * @returns {Array} Sorted list of upcoming events
+ */
+export const getUpcomingThisWeek = async (userId) => {
+     const startOfWeek = new Date();
+     startOfWeek.setHours(0, 0, 0, 0);
+     
+     const endOfWeek = new Date();
+     endOfWeek.setDate(startOfWeek.getDate() + 7);
+     endOfWeek.setHours(23, 59, 59, 999);
+
+     const query = {
+          user: userId,
+          $or: [
+               { dueDate: { $gte: startOfWeek, $lte: endOfWeek } },
+               { deadline: { $gte: startOfWeek, $lte: endOfWeek } }
+          ]
+     };
+
+     // Note: We perform separate queries because the date field names differ
+     const [bills, savings, debts] = await Promise.all([
+          Bill.find({ user: userId, dueDate: { $gte: startOfWeek, $lte: endOfWeek }, status: { $ne: 'paid' } }),
+          Saving.find({ user: userId, deadline: { $gte: startOfWeek, $lte: endOfWeek } }),
+          Debt.find({ user: userId, dueDate: { $gte: startOfWeek, $lte: endOfWeek }, status: { $ne: 'paid' } })
+     ]);
+
+     const upcoming = [
+          ...bills.map(b => ({ ...b.toObject(), type: 'bill', date: b.dueDate })),
+          ...savings.map(s => ({ ...s.toObject(), type: 'saving', date: s.deadline })),
+          ...debts.map(d => ({ ...d.toObject(), type: 'debt', date: d.dueDate }))
+     ];
+
+     // Sort by date: nearly to far
+     upcoming.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+     return upcoming;
 };
