@@ -80,6 +80,7 @@ router.use(protect);
  *         description: Unauthorized
  */
 router.get('/profile', usersController.getMe);
+router.get('/allusers', usersController.getUsers);
 
 /**
  * @swagger

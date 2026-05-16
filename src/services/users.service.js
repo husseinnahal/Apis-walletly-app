@@ -1,7 +1,6 @@
 import User from '../models/users.model.js';
 import ApiError from '../utils/ApiError.js';
 import { deleteImageFromCloudinary, uploadImageToCloudinary } from '../utils/cloudinary.js';
-import axios from 'axios';
 
 /**
  * Get user profile safely
@@ -14,6 +13,11 @@ export const getUserProfile = async (userId) => {
           throw ApiError.notFound('User not found');
      }
      return user;
+};
+
+export const getAllUsers = async () => {
+     const users = await User.find().select('-password');
+     return users;
 };
 
 
