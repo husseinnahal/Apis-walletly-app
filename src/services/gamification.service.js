@@ -136,17 +136,21 @@ export const recordActivity = async (userId) => {
   if (lastStr === todayStr) {
     // Already recorded activity today — only give transaction coins, no new streak
   } else {
-    // Check if yesterday was the last activity (continuing streak)
+    // Check if yesterday or the day before (1 day off) was the last activity
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = toDateStr(yesterday);
 
-    if (!lastStr || lastStr === yesterdayStr) {
-      // Extend streak
+    const dayBeforeYesterday = new Date();
+    dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+    const dayBeforeYesterdayStr = toDateStr(dayBeforeYesterday);
+
+    if (!lastStr || lastStr === yesterdayStr || lastStr === dayBeforeYesterdayStr) {
+      // Extend streak (allowed 1 day off)
       doc.currentStreak += 1;
       streakUpdated = true;
     } else {
-      // Gap of 2+ days → reset streak to 0
+      // Gap of 2+ days → reset streak to 0 (starting a new streak today)
       doc.currentStreak  = 0;
       doc.awardedMilestones = []; // reset milestone tracking
       streakUpdated = true;
@@ -274,6 +278,7 @@ export const progressChallenge = async (userId, challengeType, increment = 1) =>
   
 
   doc.coins += coinsEarned;
+  if (doc.lifetimeCoins !== undefined) doc.lifetimeCoins += coinsEarned;
   await doc.save();
 
   return {
@@ -380,18 +385,22 @@ export const resetExpiredStreaks = async () => {
  * Reminds users who haven't been active today but were active yesterday.
  */
 export const sendStreakReminders = async () => {
-  const oneDayAgo = new Date();
-  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-  oneDayAgo.setHours(0, 0, 0, 0);
+  const startOfYesterday = new Date();
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+  startOfYesterday.setHours(0, 0, 0, 0);
 
-  // Users whose last activity was between 24 and 48 hours ago
+  const startOfTwoDaysAgo = new Date();
+  startOfTwoDaysAgo.setDate(startOfTwoDaysAgo.getDate() - 2);
+  startOfTwoDaysAgo.setHours(0, 0, 0, 0);
+
+  // Users active the day before yesterday, but NOT active yesterday (last chance today!)
   const filter = {
     currentStreak: { $gt: 0 },
-    lastActivityDate: { $lt: new Date(), $gte: oneDayAgo },
+    lastActivityDate: { $lt: startOfYesterday, $gte: startOfTwoDaysAgo },
     streakReminderSent: false
   };
 
-  const usersToRemind = await Gamification.find({filter});
+  const usersToRemind = await Gamification.find(filter);
 
   if (usersToRemind.length > 0) {
     for (const doc of usersToRemind) {

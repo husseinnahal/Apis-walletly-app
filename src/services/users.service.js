@@ -2,6 +2,8 @@ import User from '../models/users.model.js';
 import Bill from '../models/bills.model.js';
 import Saving from '../models/saving.model.js';
 import Debt from '../models/debt.model.js';
+import Transaction from '../models/transactions.model.js';
+import Account from '../models/accounts.model.js';
 import ApiError from '../utils/ApiError.js';
 import { deleteImageFromCloudinary, uploadImageToCloudinary } from '../utils/cloudinary.js';
 
@@ -200,4 +202,90 @@ export const getUpcomingThisWeek = async (userId) => {
      upcoming.sort((a, b) => new Date(a.date) - new Date(b.date));
 
      return upcoming;
+};
+
+/**
+ * Get comprehensive financial stats for a user (spent, income, saved, debts, credits) filtered by a date range
+ * @param {string} userId The logged-in user's ID
+ * @param {string} [startDateStr] Optional start date string (YYYY-MM-DD)
+ * @param {string} [endDateStr] Optional end date string (YYYY-MM-DD)
+ * @returns {Object} Calculated flow data for the range
+ */
+export const getMonthlyStatsOverview = async (userId, startDateStr, endDateStr) => {
+     let startDate;
+     let endDate;
+
+     if (startDateStr) {
+          startDate = new Date(startDateStr);
+          startDate.setHours(0, 0, 0, 0);
+     } else {
+          startDate = new Date();
+          startDate.setDate(1);
+          startDate.setHours(0, 0, 0, 0);
+     }
+
+     if (endDateStr) {
+          endDate = new Date(endDateStr);
+          endDate.setHours(23, 59, 59, 999);
+     } else {
+          endDate = new Date();
+          endDate.setMonth(endDate.getMonth() + 1);
+          endDate.setDate(0);
+          endDate.setHours(23, 59, 59, 999);
+     }
+
+     // 1. Fetch transactions in range
+     const transactions = await Transaction.find({
+          user: userId,
+          date: { $gte: startDate, $lte: endDate }
+     });
+
+     let spent = 0;
+     let income = 0;
+     let saved = 0;
+
+     transactions.forEach(tx => {
+          if (tx.type === 'expense') {
+               spent += tx.amount;
+          } else if (tx.type === 'income') {
+               income += tx.amount;
+          } else if (tx.type === 'saving') {
+               saved += tx.amount;
+          }
+     });
+
+     // 2. Fetch debts and credits payments in range
+     const debts = await Debt.find({ userId: userId });
+
+     let debtPaid = 0;
+     let creditReceived = 0;
+
+     debts.forEach(debt => {
+          debt.paidDebt.forEach(payment => {
+               const paymentDate = new Date(payment.date);
+               if (paymentDate >= startDate && paymentDate <= endDate) {
+                    if (debt.type === 'debt') {
+                         debtPaid += payment.amount;
+                    } else if (debt.type === 'credit') {
+                         creditReceived += payment.amount; // repayments they got back on loans lent
+                    }
+               }
+          });
+     });
+
+     // 3. Fetch all accounts and sum total balances (current total money)
+     const accounts = await Account.find({ user: userId });
+     let totalMoney = 0;
+     accounts.forEach(acc => {
+          totalMoney += acc.totalBalance;
+     });
+
+     return {
+          spent,
+          income,
+          saved,
+          debtPaid,
+          creditReceived,
+          totalMoney
+     };
 };

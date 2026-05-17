@@ -54,6 +54,17 @@ const updateCurrencySchema = createSchema({
      },
 });
 
+const statsQuerySchema = createSchema({
+     query: {
+          startDate: Joi.date().iso().optional().messages({
+               'date.format': 'Start date must be a valid ISO date (YYYY-MM-DD)',
+          }),
+          endDate: Joi.date().iso().optional().messages({
+               'date.format': 'End date must be a valid ISO date (YYYY-MM-DD)',
+          }),
+     },
+});
+
 /**
  * @swagger
  * tags:
@@ -82,6 +93,7 @@ router.use(protect);
 router.get('/profile', usersController.getMe);
 router.get('/allusers', usersController.getUsers);
 router.get('/upcoming', usersController.getUpcoming);
+router.get('/stats-overview', validate(statsQuerySchema), usersController.getMonthlyStats);
 
 /**
  * @swagger

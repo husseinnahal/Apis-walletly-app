@@ -93,3 +93,17 @@ export const getUpcoming = async (req, res) => {
           data: upcoming
      });
 };
+
+/**
+ * Get monthly stats overview (spent, income, saved, debt paid, credit received)
+ * @route GET /api/users/stats-overview
+ */
+export const getMonthlyStats = async (req, res) => {
+     const { startDate, endDate } = req.query;
+     const stats = await usersService.getMonthlyStatsOverview(req.user._id, startDate, endDate);
+
+     res.status(200).json({
+          success: true,
+          data: stats
+     });
+};
