@@ -62,7 +62,7 @@ const convertToUSD = async (amount, currency) => {
 
         // Convert amount to USD
         const rate = rates[currency];
-        const amountInUSD = (amount / rate).toFixed(2);
+        const amountInUSD = amount / rate;
 
         if (Number(amountInUSD) <= 0) {
             throw ApiError.badRequest('The amount is too small');
