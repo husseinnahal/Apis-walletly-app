@@ -62,7 +62,12 @@ export const getSavingGoals = async (userId, filters = {}) => {
         };
     }
 
-    const goals = await Saving.find(query).sort({ createdAt: -1 });
+    const goals = await Saving.find(query)
+        .sort({ createdAt: -1 })
+        .populate({
+            path: 'savedAmounts.transactionId',
+            select: 'account'
+        });
 
     const totals = goals.reduce((acc, goal) => {
         acc.totalTarget += goal.amount || 0;
@@ -77,7 +82,11 @@ export const getSavingGoals = async (userId, filters = {}) => {
 };
 
 export const getSavingGoalById = async (userId, goalId) => {
-    const goal = await Saving.findOne({ _id: goalId, userId });
+    const goal = await Saving.findOne({ _id: goalId, userId })
+        .populate({
+            path: 'savedAmounts.transactionId',
+            select: 'account'
+        });
     if (!goal) {
         throw ApiError.notFound('Saving goal not found');
     }
@@ -262,7 +271,11 @@ export const getGoalInsights = async (userId, goalId, language) => {
 };
 
 export const getAPayment = async (userId, goalId, progressId) => {
-    const goal = await Saving.findOne({ _id: goalId, userId });
+    const goal = await Saving.findOne({ _id: goalId, userId })
+        .populate({
+            path: 'savedAmounts.transactionId',
+            select: 'account'
+        });
     if (!goal) {
         throw ApiError.notFound('Saving goal not found');
     }

@@ -38,6 +38,10 @@ const billSchema = createSchema({
 
 const paymentSchema = createSchema({
     body: {
+        amount: Joi.number().required().min(0).messages({
+            'number.min': 'Payment amount must be positive',
+            'any.required': 'Payment amount is required',
+        }),
         date: Joi.date().optional(),
         accountId: Joi.string().required().messages({
             'any.required': 'Account ID is required',

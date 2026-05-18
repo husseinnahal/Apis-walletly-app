@@ -116,7 +116,12 @@ export const getBills = async (userId, filters = {}) => {
             $options: 'i' 
         };
     }
-    const bills = await Bill.find(query).sort({ dueDate: 1 });
+    const bills = await Bill.find(query)
+        .sort({ dueDate: 1 })
+        .populate({
+            path: 'paymentHistory.transactionId',
+            select: 'account'
+        });
     
     // 1. Custom Priority Sorting (overdue > pending > paid > cancelled)
     const statusPriority = {
@@ -183,7 +188,11 @@ export const getBills = async (userId, filters = {}) => {
 };
 
 export const getBillById = async (userId, billId) => {
-    const bill = await Bill.findOne({ _id: billId, userId });
+    const bill = await Bill.findOne({ _id: billId, userId })
+        .populate({
+            path: 'paymentHistory.transactionId',
+            select: 'account'
+        });
     if (!bill) throw ApiError.notFound('Bill not found');
     return bill;
 };
@@ -272,7 +281,7 @@ export const markBillAsPaid = async (userId, billId, paymentData = {}) => {
     const transaction = await transactionService.createTransaction(userId, {
         account: paymentData.accountId || bill.autoPayAccountId,
         title: `${bill.name}`,
-        amount: bill.amount,
+        amount: paymentData.amount || bill.amount,
         type: 'expense',
         category: category?._id,
         date: paymentData.date || new Date(),
@@ -281,7 +290,7 @@ export const markBillAsPaid = async (userId, billId, paymentData = {}) => {
 
     // 2. Update Payment History
     bill.paymentHistory.push({
-        amount: bill.amount,
+        amount: paymentData.amount || bill.amount,
         date: paymentData.date || new Date(),
         transactionId: transaction._id
     });

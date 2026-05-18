@@ -117,13 +117,24 @@ export const getMetals = async (userId, filters = {}) => {
     if (filters.type) query.type = filters.type;
     if (filters.form) query.form = filters.form;
     
-    // Sort by newest date first
-    const metals = await Metal.find(query).sort({ date: -1 });
+    // Sort by newest date first and populate transaction's account field
+    const metals = await Metal.find(query)
+        .sort({ date: -1 })
+        .populate({
+            path: 'transactionId',
+            select: 'account'
+        });
+
     return metals;
 };
 
 export const getMetalById = async (userId, metalId) => {
-    const metal = await Metal.findOne({ _id: metalId, userId });
+    const metal = await Metal.findOne({ _id: metalId, userId })
+        .populate({
+            path: 'transactionId',
+            select: 'account'
+        });
+        
     if (!metal) throw ApiError.notFound('Metal record not found');
     return metal;
 };

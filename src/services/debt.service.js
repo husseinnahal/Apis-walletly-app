@@ -70,7 +70,12 @@ export const getDebts = async (userId, filters = {}) => {
     };
     }
 
-    const debts = await Debt.find(query).sort({ status: 1, createdAt: -1 });
+    const debts = await Debt.find(query)
+        .sort({ status: 1, createdAt: -1 })
+        .populate({
+            path: 'paidDebt.transactionId',
+            select: 'account'
+        });
 
     const processedDebts = debts.map(debt => {
         const debtObj = debt.toObject();
@@ -126,7 +131,11 @@ export const getDebts = async (userId, filters = {}) => {
 };
 
 export const getDebtById = async (userId, debtId) => {
-    const debt = await Debt.findOne({ _id: debtId, userId });
+    const debt = await Debt.findOne({ _id: debtId, userId })
+        .populate({
+            path: 'paidDebt.transactionId',
+            select: 'account'
+        });
     if (!debt) throw ApiError.notFound('Debt not found');
     return debt;
 };
@@ -328,7 +337,11 @@ export const updatePayment = async (userId, debtId, paymentId, paymentData) => {
 };
 
 export const getAPayment = async (userId, goalId, progressId) => {
-    const goal = await Debt.findOne({ _id: goalId, userId });
+    const goal = await Debt.findOne({ _id: goalId, userId })
+        .populate({
+            path: 'paidDebt.transactionId',
+            select: 'account'
+        });
     if (!goal) {
         throw ApiError.notFound('Debt not found');
     }
