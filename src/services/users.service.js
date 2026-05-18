@@ -187,9 +187,9 @@ export const getUpcomingThisWeek = async (userId) => {
 
      // Note: We perform separate queries because the date field names differ
      const [bills, savings, debts] = await Promise.all([
-          Bill.find({ user: userId, dueDate: { $gte: startOfWeek, $lte: endOfWeek }, status: { $ne: 'paid' } }),
-          Saving.find({ user: userId, deadline: { $gte: startOfWeek, $lte: endOfWeek } }),
-          Debt.find({ user: userId, dueDate: { $gte: startOfWeek, $lte: endOfWeek }, status: { $ne: 'paid' } })
+          Bill.find({ userId : userId, dueDate: { $gte: startOfWeek, $lte: endOfWeek }, status: { $ne: 'paid' } }),
+          Saving.find({ userId : userId, deadline: { $gte: startOfWeek, $lte: endOfWeek } }),
+          Debt.find({ userId : userId, dueDate: { $gte: startOfWeek, $lte: endOfWeek }, status: { $ne: 'paid' } })
      ]);
 
      const upcoming = [
