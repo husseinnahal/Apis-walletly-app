@@ -1,7 +1,11 @@
 import axios from 'axios';
 import mongoose from 'mongoose';
 import Account from '../models/accounts.model.js';
+import Bill from '../models/bills.model.js';
 import Budget from '../models/budgets.model.js';
+import Debt from '../models/debt.model.js';
+import Metal from '../models/metals.model.js';
+import Saving from '../models/saving.model.js';
 import Transaction from '../models/transactions.model.js';
 import ApiError from '../utils/ApiError.js';
 import * as gamificationService from './gamification.service.js';
@@ -312,11 +316,78 @@ export const updateTransaction = async (userId, transactionId, updateData) => {
 };
 
 export const deleteTransaction = async (userId, transactionId) => {
-    const transaction = await Transaction.findOneAndDelete({ _id: transactionId, user: userId });
-    
+    // Populate category so we can read its name for the pre-filter checks below
+    const transaction = await Transaction.findOne({ _id: transactionId, user: userId })
+        .populate('category', 'name');
+
     if (!transaction) {
         throw ApiError.notFound('Transaction not found');
     }
+
+    const categoryName = transaction.category?.name;
+
+    // ── Debt Payment Guard ──────────────────────────────────────────────────
+    // Only check if the category is 'Debt' — skips the DB query for all others.
+    if (categoryName === 'Debt') {
+        const linkedDebt = await Debt.findOne({
+            userId,
+            'paidDebt.transactionId': transaction._id
+        });
+        if (linkedDebt) {
+            throw ApiError.badRequest(
+                `This transaction is linked to a debt payment. ` +
+                `To delete it, go to Debt & Credit and remove the payment from there.`
+            );
+        }
+    }
+
+    // ── Metal Purchase Guard ────────────────────────────────────────────────
+    // Only check if the category is 'Metals'.
+    if (categoryName === 'Metals') {
+        const linkedMetal = await Metal.findOne({
+            userId,
+            transactionId: transaction._id
+        });
+        if (linkedMetal) {
+            throw ApiError.badRequest(
+                `This transaction is linked to a metal purchase. ` +
+                `To delete it, go to Metals and remove the record from there.`
+            );
+        }
+    }
+
+    // ── Bill Payment Guard ──────────────────────────────────────────────────
+    // Only check if the category is 'Bills'.
+    if (categoryName === 'Bills') {
+        const linkedBill = await Bill.findOne({
+            userId,
+            'paymentHistory.transactionId': transaction._id
+        });
+        if (linkedBill) {
+            throw ApiError.badRequest(
+                `This transaction is linked to a bill payment (${linkedBill.name}). ` +
+                `You can't delete this transaction.`
+            );
+        }
+    }
+
+    // ── Saving Deposit Guard ────────────────────────────────────────────────
+    // Only check if the category is 'Saving'.
+    if (categoryName === 'Saving') {
+        const linkedSaving = await Saving.findOne({
+            userId,
+            'savedAmounts.transactionId': transaction._id
+        });
+        if (linkedSaving) {
+            throw ApiError.badRequest(
+                `This transaction is linked to a saving  (${linkedSaving.title}). ` +
+                `To delete it, go to Savings and remove the deposit from there.`
+            );
+        }
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
+    await transaction.deleteOne();
 
     // Revert budget spent if it was an expense
     if (transaction.type === 'expense') {
