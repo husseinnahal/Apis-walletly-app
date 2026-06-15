@@ -231,7 +231,7 @@ export const deleteBill = async (userId, billId) => {
     if (bill.paymentHistory && bill.paymentHistory.length > 0) {
         for (const payment of bill.paymentHistory) {
             if (payment.transactionId) {
-                await transactionService.deleteTransaction(userId, payment.transactionId);
+                await transactionService.deleteTransaction(userId, payment.transactionId, { skipGuards: true });
             }
         }
     }

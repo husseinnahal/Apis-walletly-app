@@ -181,7 +181,7 @@ export const deleteDebt = async (userId, debtId) => {
     const transactionIds = debt.paidDebt.map(p => p.transactionId).filter(id => id);
     if (transactionIds.length > 0) {
         for (const tid of transactionIds) {
-            await transactionService.deleteTransaction(userId, tid);
+            await transactionService.deleteTransaction(userId, tid, { skipGuards: true });
         }
     }
 
@@ -268,7 +268,7 @@ export const deletePayment = async (userId, debtId, paymentId) => {
 
     // Delete linked transaction
     if (payment.transactionId) {
-        await transactionService.deleteTransaction(userId, payment.transactionId);
+        await transactionService.deleteTransaction(userId, payment.transactionId, { skipGuards: true });
     }
 
 

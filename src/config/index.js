@@ -18,7 +18,7 @@ const config = {
      },
 
      // cors
-     corsOrigin: process.env.CORS_ORIGIN || '*',
+     corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
 
      // TODO: add database configuration based on project needs
      // database

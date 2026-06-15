@@ -126,7 +126,7 @@ export const deleteSavingGoal = async (userId, goalId) => {
     const transactionIds = goal.savedAmounts.map(p => p.transactionId).filter(id => id);
     if (transactionIds.length > 0) {
         for (const tid of transactionIds) {
-            await transactionService.deleteTransaction(userId, tid);
+            await transactionService.deleteTransaction(userId, tid, { skipGuards: true });
         }
     }
     
@@ -247,7 +247,7 @@ export const deleteProgress = async (userId, goalId, progressId) => {
 
     // Delete the linked transaction if it exists
     if (entry.transactionId) {
-        await transactionService.deleteTransaction(userId, entry.transactionId);
+        await transactionService.deleteTransaction(userId, entry.transactionId, { skipGuards: true });
     }
 
     // Remove the entry

@@ -177,7 +177,7 @@ export const deleteMetal = async (userId, metalId) => {
 
     // Delete associated transaction
     if (metal.transactionId) {
-        await transactionService.deleteTransaction(userId, metal.transactionId);
+        await transactionService.deleteTransaction(userId, metal.transactionId, { skipGuards: true });
     }
 
     await metal.deleteOne();

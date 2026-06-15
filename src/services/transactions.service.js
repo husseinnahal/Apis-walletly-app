@@ -315,7 +315,7 @@ export const updateTransaction = async (userId, transactionId, updateData) => {
     return updatedTransaction;
 };
 
-export const deleteTransaction = async (userId, transactionId) => {
+export const deleteTransaction = async (userId, transactionId, { skipGuards = false } = {}) => {
     // Populate category so we can read its name for the pre-filter checks below
     const transaction = await Transaction.findOne({ _id: transactionId, user: userId })
         .populate('category', 'name');
@@ -326,6 +326,11 @@ export const deleteTransaction = async (userId, transactionId) => {
 
     const categoryName = transaction.category?.name;
 
+    // ── Linked-Entity Guards ─────────────────────────────────────────────────
+    // These guards are only for direct user calls from the Transactions screen.
+    // When an internal service (debt, savings, bills, metals) deletes its own
+    // linked transaction it passes skipGuards: true to avoid a circular loop.
+    if (!skipGuards) {
     // ── Debt Payment Guard ──────────────────────────────────────────────────
     // Only check if the category is 'Debt' — skips the DB query for all others.
     if (categoryName === 'Debt') {
@@ -385,6 +390,7 @@ export const deleteTransaction = async (userId, transactionId) => {
             );
         }
     }
+    } // end if (!skipGuards)
     // ────────────────────────────────────────────────────────────────────────
 
     await transaction.deleteOne();
