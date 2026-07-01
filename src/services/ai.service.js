@@ -9,12 +9,12 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Initialize Groq with the API key
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Use Gemini 2.5 Flash for maximum speed and accuracy, fallback to 1.5 if busy
+// Use Gemini 2.5 Flash-lite 
 const getModel = () => {
     try {
-        return genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    } catch (e) {
         return genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+    } catch (e) {
+        return genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     }
 };
 
