@@ -5,20 +5,24 @@ import * as authService from '../services/auth.service.js';
  * Helper to structure responses with cookie setting
  */
 const sendTokenResponse = (user, tokens, statusCode, res) => {
+     const isProduction = process.env.NODE_ENV === 'production';
+
      // Options for cookie
      const options = {
           expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
           httpOnly: true,
-          // secure: config.env === 'production' // uncomment when using HTTPS in production
+          sameSite: isProduction ? 'none' : 'lax',
+          secure: isProduction, // must be true when sameSite is 'none'
      };
 
-     // Attach refresh token to cookie, but return only access token in JSON body
+     // Attach refresh token to cookie, AND return it in JSON body for localStorage fallback
      res
           .status(statusCode)
           .cookie('refreshToken', tokens.refreshToken, options)
           .json({
                success: true,
                accessToken: tokens.accessToken,
+               refreshToken: tokens.refreshToken,
                data: {
                     id: user._id,
                     username: user.username,
@@ -65,17 +69,21 @@ export const login = async (req, res) => {
  * @route POST /api/auth/refresh
  */
 export const refresh = async (req, res) => {
-     // Token comes from browser cookie
-     const refreshToken = req.cookies.refreshToken;
+     // Token comes from request body or browser cookie
+     const refreshToken = req.body.refreshToken || req.cookies.refreshToken;
      const deviceInfo = req.headers['x-device-name'] || req.headers['user-agent'] || 'Unknown Device';
      const ip = req.ip || 'Unknown IP';
      
      const tokens = await authService.refreshSession(refreshToken, deviceInfo, ip);
      
+     const isProduction = process.env.NODE_ENV === 'production';
+
      // Note: In token rotation, we set the NEW refresh token back in the cookie
      const options = {
           expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           httpOnly: true,
+          sameSite: isProduction ? 'none' : 'lax',
+          secure: isProduction,
      };
 
      res
@@ -83,7 +91,8 @@ export const refresh = async (req, res) => {
           .cookie('refreshToken', tokens.refreshToken, options)
           .json({
                success: true,
-               accessToken: tokens.accessToken
+               accessToken: tokens.accessToken,
+               refreshToken: tokens.refreshToken
           });
 };
 
@@ -92,13 +101,15 @@ export const refresh = async (req, res) => {
  * @route POST /api/auth/logout
  */
 export const logout = async (req, res) => {
-     const refreshToken = req.cookies.refreshToken;
+     const refreshToken = req.body.refreshToken || req.cookies.refreshToken;
      await authService.logoutUser(refreshToken);
 
      // Clear the cookie
      res.cookie('refreshToken', 'none', {
           expires: new Date(Date.now() + 10 * 1000),
-          httpOnly: true
+          httpOnly: true,
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+          secure: process.env.NODE_ENV === 'production',
      });
 
      res.status(200).json({

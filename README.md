@@ -205,7 +205,7 @@ npm run format    # Format with Prettier
 
 Environment variables (`.env`):
 ```env
-NODE_ENV=development
+NODE_ENV=NODE_ENV
 PORT=3000
 HOST=localhost
 LOG_LEVEL=info
