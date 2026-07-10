@@ -78,9 +78,9 @@ export const parseVoiceTransactions = async (audioFilePath, categories, accounts
                 { inlineData: { mimeType, data: audioBase64 } }
             ]);
         } catch (err) {
-            // If 503 or 429, try 2.5 flash explicitly
-            if (err.message.includes('503') || err.message.includes('429')) {
-                model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+            // If 500, 503 or 429, try 2.5 flash explicitly
+            if (err.message.includes('500')  || err.message.includes('503') || err.message.includes('429')) {
+                model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
                 result = await model.generateContent([
                     prompt,
                     { inlineData: { mimeType, data: audioBase64 } }
@@ -287,3 +287,4 @@ ${JSON.stringify(userContext)}`;
         throw ApiError.internal(`AI Chatbot Error: ${error.message || 'Unknown error'}`);
     }
 };
+
