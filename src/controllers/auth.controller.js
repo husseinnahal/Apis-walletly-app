@@ -51,6 +51,42 @@ export const register = async (req, res) => {
 };
 
 /**
+ * Initiate Registration
+ * @route POST /api/auth/register/initiate
+ */
+export const registerInitiate = async (req, res) => {
+     const result = await authService.initiateRegister(req.body);
+     res.status(200).json(result);
+};
+
+/**
+ * Verify Registration OTP
+ * @route POST /api/auth/register/verify
+ */
+export const registerVerify = async (req, res) => {
+     const deviceInfo = req.headers['x-device-name'] || req.headers['user-agent'] || 'Unknown Device';
+     const ip = req.ip || 'Unknown IP';
+     const { email, otp } = req.body;
+     
+     const { user, tokens } = await authService.verifyRegister(email, otp, deviceInfo, ip);
+     sendTokenResponse(user, tokens, 201, res);
+};
+
+/**
+ * Login/Register with Google
+ * @route POST /api/auth/google
+ */
+export const googleLogin = async (req, res) => {
+     const deviceInfo = req.headers['x-device-name'] || req.headers['user-agent'] || 'Unknown Device';
+     const ip = req.ip || 'Unknown IP';
+     const { idToken } = req.body;
+
+     const { user, tokens } = await authService.googleAuth(idToken, deviceInfo, ip);
+     sendTokenResponse(user, tokens, 200, res);
+};
+
+
+/**
  * Login user
  * @route POST /api/auth/login
  */

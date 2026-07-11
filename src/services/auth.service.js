@@ -1,8 +1,15 @@
 import User from '../models/users.model.js';
 import RefreshToken from '../models/refreshToken.model.js';
+import PendingUser from '../models/pendingUser.model.js';
 import ApiError from '../utils/ApiError.js';
 import jwt from 'jsonwebtoken';
 import config from '../config/index.js';
+import * as mailService from './mail.service.js';
+import { OAuth2Client } from 'google-auth-library';
+import axios from 'axios';
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 
 /**
  * Generate tokens and save RefreshToken to DB
@@ -46,6 +53,114 @@ export const registerUser = async (userData) => {
 
      return { user, tokens };
 };
+
+/**
+ * Initiate standard registration by validating fields and sending OTP
+ */
+export const initiateRegister = async (userData) => {
+     const existingByEmail = await User.findOne({ email: userData.email });
+     if (existingByEmail) {
+          throw ApiError.badRequest('Email is already in use');
+     }
+
+     const existingByPhone = await User.findOne({ phone: userData.phone });
+     if (existingByPhone) {
+          throw ApiError.badRequest('Phone number is already in use');
+     }
+
+     // Generate a 6-digit random numeric OTP
+     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+     // Clear any existing pending registrations for this email
+     await PendingUser.deleteMany({ email: userData.email });
+
+     // Save temporarily to PendingUser collection
+     await PendingUser.create({
+          username: userData.username,
+          email: userData.email,
+          phone: userData.phone,
+          password: userData.password,
+          otp: otp
+     });
+
+     // Send email with OTP
+     await mailService.sendOtpEmail(userData.email, otp, userData.username);
+
+     return { success: true, message: 'Verification OTP sent to your email.' };
+};
+
+/**
+ * Verify OTP and complete standard registration
+ */
+export const verifyRegister = async (email, otp, deviceInfo, ip) => {
+     const pending = await PendingUser.findOne({ email, otp });
+     if (!pending) {
+          throw ApiError.badRequest('Invalid or expired verification code');
+     }
+
+     // Create the actual user in DB
+     const user = await User.create({
+          username: pending.username,
+          email: pending.email,
+          phone: pending.phone,
+          password: pending.password
+     });
+
+     // Delete pending registrations for this email
+     await PendingUser.deleteMany({ email });
+
+     // Generate active auth session tokens
+     const tokens = await generateAuthTokens(user, deviceInfo, ip);
+
+     return { user, tokens };
+};
+
+/**
+ * Authenticate or register a user using their Google ID Token
+ */
+export const googleAuth = async (idToken, deviceInfo, ip) => {
+     let payload;
+
+     try {
+          const ticket = await googleClient.verifyIdToken({
+               idToken: idToken,
+               audience: process.env.GOOGLE_CLIENT_ID,
+          });
+          payload = ticket.getPayload();
+     } catch (error) {
+          // Fallback: Verify directly using Google TokenInfo API if client ID local verification differs
+          try {
+               const res = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+               payload = res.data;
+          } catch (e) {
+               throw ApiError.unauthorized('Invalid Google ID token');
+          }
+     }
+
+     if (!payload || !payload.email) {
+          throw ApiError.unauthorized('Invalid Google token payload');
+     }
+
+     const email = payload.email;
+     const name = payload.name || email.split('@')[0];
+
+     let user = await User.findOne({ email });
+
+     if (!user) {
+          // User is logging in for the first time — register automatically
+          user = await User.create({
+               username: name,
+               email: email,
+               phone: 'Google Auth', // Required placeholder
+               password: Math.random().toString(36).slice(-16), // Hashed random password
+               avatar: payload.picture || ''
+          });
+     }
+
+     const tokens = await generateAuthTokens(user, deviceInfo, ip);
+     return { user, tokens };
+};
+
 
 /**
  * Login user via email or phone

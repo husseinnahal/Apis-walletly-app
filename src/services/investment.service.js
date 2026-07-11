@@ -84,7 +84,7 @@ export const getMyInvestments = async (userId) => {
  * Get details of a specific investment
  */
 export const getInvestmentById = async (userId, investmentId) => {
-    const investment = await Investment.findById(investmentId).populate('userId', 'name email phone avatar');
+    const investment = await Investment.findById(investmentId).populate('userId', 'username email phone avatar');
     
     if (!investment) {
         throw ApiError.notFound('Investment opportunity not found');

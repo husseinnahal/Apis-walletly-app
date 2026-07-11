@@ -87,6 +87,9 @@ const loginSchema = createSchema({
  *         description: Validation error
  */
 router.post('/register', validate(registerSchema), authController.register);
+router.post('/register/initiate', validate(registerSchema), authController.registerInitiate);
+router.post('/register/verify', authController.registerVerify);
+router.post('/google', authController.googleLogin);
 
 /**
  * @swagger
