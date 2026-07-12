@@ -122,11 +122,15 @@ export const googleAuth = async (idToken, deviceInfo, ip) => {
      let payload;
 
      try {
-          const ticket = await googleClient.verifyIdToken({
-               idToken: idToken,
-               audience: process.env.GOOGLE_CLIENT_ID,
-          });
-          payload = ticket.getPayload();
+           const ticket = await googleClient.verifyIdToken({
+                idToken: idToken,
+                audience: [
+                     process.env.GOOGLE_CLIENT_ID,
+                     process.env.ANDROID_GOOGLE_CLIENT_ID,
+                     '331749950429-aqgtsptj8uurqrl2qhklum59ecu4dioi.apps.googleusercontent.com' // Default Android client ID
+                ].filter(Boolean),
+           });
+           payload = ticket.getPayload();
      } catch (error) {
           // Fallback: Verify directly using Google TokenInfo API if client ID local verification differs
           try {
