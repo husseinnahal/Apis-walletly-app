@@ -1,5 +1,5 @@
-import nodemailer from 'nodemailer';
 import axios from 'axios';
+import nodemailer from 'nodemailer';
 import logger from '../utils/logger.js';
 
 let transporter = null;

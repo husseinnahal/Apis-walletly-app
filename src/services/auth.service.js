@@ -1,12 +1,12 @@
-import User from '../models/users.model.js';
-import RefreshToken from '../models/refreshToken.model.js';
-import PendingUser from '../models/pendingUser.model.js';
-import ApiError from '../utils/ApiError.js';
+import axios from 'axios';
+import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import config from '../config/index.js';
+import PendingUser from '../models/pendingUser.model.js';
+import RefreshToken from '../models/refreshToken.model.js';
+import User from '../models/users.model.js';
+import ApiError from '../utils/ApiError.js';
 import * as mailService from './mail.service.js';
-import { OAuth2Client } from 'google-auth-library';
-import axios from 'axios';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -122,15 +122,11 @@ export const googleAuth = async (idToken, deviceInfo, ip) => {
      let payload;
 
      try {
-           const ticket = await googleClient.verifyIdToken({
-                idToken: idToken,
-                audience: [
-                     process.env.GOOGLE_CLIENT_ID,
-                     process.env.ANDROID_GOOGLE_CLIENT_ID,
-                     '331749950429-aqgtsptj8uurqrl2qhklum59ecu4dioi.apps.googleusercontent.com' // Default Android client ID
-                ].filter(Boolean),
-           });
-           payload = ticket.getPayload();
+          const ticket = await googleClient.verifyIdToken({
+               idToken: idToken,
+               audience: process.env.GOOGLE_CLIENT_ID,
+          });
+          payload = ticket.getPayload();
      } catch (error) {
           // Fallback: Verify directly using Google TokenInfo API if client ID local verification differs
           try {
