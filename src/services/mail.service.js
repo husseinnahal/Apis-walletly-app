@@ -18,15 +18,19 @@ const getTransporter = () => {
     }
 
     try {
-        transporter = nodemailer.createTransport({
-            host,
-            port: Number(port),
-            secure: Number(port) === 465, // true for 465, false for 587/other
-            auth: {
-                user,
-                pass,
-            },
-        });
+        const transportConfig = host === 'smtp.gmail.com' 
+            ? {
+                service: 'gmail',
+                auth: { user, pass }
+              }
+            : {
+                host,
+                port: Number(port),
+                secure: Number(port) === 465, // true for 465, false for 587
+                auth: { user, pass }
+              };
+
+        transporter = nodemailer.createTransport(transportConfig);
         return transporter;
     } catch (error) {
         logger.error('Failed to create Nodemailer transport:', error);
