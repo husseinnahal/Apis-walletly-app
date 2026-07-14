@@ -4,6 +4,7 @@ import config from './config/index.js';
 import logger from './utils/logger.js';
 import { initializeScheduler, stopScheduler } from './utils/scheduler.js';
 import jobs from './jobs/index.js';
+import { initSocket } from './config/socket.js';
 
 let server;
 
@@ -19,6 +20,7 @@ const startServer = async () => {
           logger.info('Connected to MongoDB');
 
           server = app.listen(config.port, config.host, () => {
+          initSocket(server);
           logger.info(`Server started successfully`);
 
           // eslint-disable-next-line no-console

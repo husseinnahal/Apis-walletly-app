@@ -14,6 +14,7 @@ import chatbotRoute from './api/chatbot.route.js';
 import accountRoute from './api/account.route.js';
 import gamificationRoute from './api/gamification.route.js';
 import notificationRoute from './api/notification.route.js';
+import chatRoute from './api/chat.route.js';
 
 const router = express.Router();
 
@@ -51,6 +52,7 @@ router.use('/api/chatbot', chatbotRoute);
 router.use('/api/accounts', accountRoute);
 router.use('/api/gamification', gamificationRoute);
 router.use('/api/notifications', notificationRoute);
+router.use('/api/chats', chatRoute);
 
 
 /**
@@ -85,6 +87,7 @@ router.get('/api', (req, res) => {
                accounts: '/api/accounts',
                gamification: '/api/gamification',
                notifications: '/api/notifications',
+               chats: '/api/chats',
           },
      });
 });
