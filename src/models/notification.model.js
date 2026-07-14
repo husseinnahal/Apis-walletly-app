@@ -22,7 +22,7 @@ const notificationSchema = new mongoose.Schema(
     },
     feature: {
       type: String,
-      enum: ['budget', 'transaction', 'bill', 'saving', 'debt', "investment","challenges"],
+      enum: ['budget', 'transaction', 'bill', 'saving', 'debt', 'investment', 'challenges', 'chat'],
       required: true,
     },
 
